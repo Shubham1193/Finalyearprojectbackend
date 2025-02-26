@@ -1,0 +1,3 @@
+API_KEY = "AIzaSyC5NMftqNr1LeLSxPRDvfinai4LN5YpplQ"
+MONGO = "mongodb+srv://Shubham91930:Shubham1173@cluster0.lhllnxo.mongodb.net/QuizApp"
+JWT_SECRET = "Shubham"
