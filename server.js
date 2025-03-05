@@ -196,6 +196,7 @@ app.post("/submit", async (req, res) => {
     res.status(200).send("submitted");
 
     let { code, userLang, id, question } = req.body;
+    console.log(code)
 
     if (userLang === "python") {
       userLang = "py";
