@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
 
-// const testCaseSchema = new mongoose.Schema({
-//   input: Object,
-//   output: [Number]
-// });
+const egSchema = new mongoose.Schema({
+  input: {},
+  output: {},
+  explanation : {}
+});
 
 const problemSchema = new mongoose.Schema({
   title: {
@@ -29,10 +30,16 @@ const problemSchema = new mongoose.Schema({
   },
   tag : {
     type : String,
+  }, 
+  example : {
+    type : [egSchema]
   },
-  
-  defaultcode : {},
-  testCases: {},
+  defaultcode : {
+
+  },
+  testCases: {
+
+  },
   constraints: [String],
   category : {
     type : String

@@ -58,7 +58,7 @@ io.on("connection", (socket) => {
         socketToUsername[socket.id] = username;
         onlineUsers.add(username);
         console.log(onlineUsers);
-        console.log(socketToUsername)
+        // console.log(socketToUsername)
         io.emit("onlineUsers", Array.from(onlineUsers));
     } catch (error) {
         console.error("JWT verification failed:", error.message);
@@ -191,32 +191,27 @@ socket.on("sendMessage", ({ sender, receiver, message }) => {
 // submit code logic
 app.post("/submit", async (req, res) => {
   try {
-    // Send initial response to submitting user
-    // console.log(req.body)
     res.status(200).send("submitted");
-
-    let { code, userLang, id, question } = req.body;
-    console.log(code)
-
-    if (userLang === "python") {
-      userLang = "py";
-    }
-
+    let { fullCode , userLang, id, question } = req.body;
+    console.log(userLang)
     // Push submission data onto Redis list 'problems'
     await client.lPush(
       "problems",
-      JSON.stringify({ id: id, code: code, language: userLang, question })
+      JSON.stringify({ id: id, code: fullCode, language: userLang, question })
     );
 
     // Subscribe to channel 'id' to listen for result
     client2.subscribe(id, (message, channel) => {
       if (channel === id) {
         // Emit result to socket room (both users)
+        console.log(message)
+        // console.log(channel)
         io.to(id).emit("code-result", message);
+        let {testCase , status} = JSON.parse(message)
 
         // Save to database for each user in the room
         roomtouserid[id].forEach(user => {
-          saveData(user, question._id , question.title , code, userLang, JSON.parse(message));
+          saveData(user, question._id , fullCode, userLang, testCase , status);
         });
 
         // Unsubscribe after handling the message
@@ -232,14 +227,15 @@ app.post("/submit", async (req, res) => {
 });
 
 //save data
-const saveData = async (userId, questionId, questionName , code, language, result) => {
+const saveData = async (userId, questionId, code, language, result , status) => {
+  console.log(userId , questionId , code , language , result , status)
   try {
     const sub = await Submission.findOneAndUpdate(
       { userId: userId, questionId: questionId },
-      { code: code, language: language, result: result , questionName : questionName },
+      { code: code, language: language, result: result , status : status },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
-    // console.log("data saved" , sub)
+    console.log("data saved" , sub)
   } catch (error) {
     console.error("Database save error:", error);
   }
