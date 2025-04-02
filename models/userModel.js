@@ -22,37 +22,4 @@ const userSchema = mongoose.Schema({
   }
 });
 
-// Friends relationship schema
-const friendsSchema = mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  friends: {
-    type: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }],
-    default: []
-  },
-  friendRequestsSent: {
-    type: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }],
-    default: []
-  },
-  friendRequestsReceived: {
-    type: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }],
-    default: []
-  }
-});
-
-friendsSchema.index({ userId: 1 });
-
 export const User = mongoose.model('User', userSchema);
-export const Friends = mongoose.model('Friends', friendsSchema);

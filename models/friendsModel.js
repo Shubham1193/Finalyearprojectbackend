@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+
 const friendsSchema = mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
