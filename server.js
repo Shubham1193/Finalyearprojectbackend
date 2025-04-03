@@ -110,13 +110,13 @@ socket.on("sendMessage", ({ sender, receiver, message }) => {
   });
 
   // code sync logic  // made this effiicinet with the below logic
-  // socket.on("update-code", ({ id, code }) => {
-  //   socket.broadcast.to(id).emit("updated-code", code);
-  // });
-  socket.on("update-code-delta", (data) => {
-    const { position, char, id } = data;
-    socket.to(id).emit("updated-code-delta", { position, char });
+  socket.on("update-code", ({ id, code }) => {
+    socket.broadcast.to(id).emit("updated-code", code);
   });
+  // socket.on("update-code-delta", (data) => {
+  //   const { position, char, id } = data;
+  //   socket.to(id).emit("updated-code-delta", { position, char });
+  // });
 
   // question sync logic
   socket.on("question", (data) => {
