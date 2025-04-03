@@ -9,12 +9,26 @@ import userRouter from "./routes/userRoute.js";
 import { Server as SocketIOServer } from "socket.io";
 import jwt from "jsonwebtoken";
 import Submission from "./models/submissionSchema.js";
+import axios from "axios";
+
 
 
 dotenv.config();
 const app = express();
 app.use(express.json());
 
+
+app.get('/proxy-image', async (req, res) => {
+  const imageUrl = req.query.url;
+  try {
+    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    res.set('Content-Type', response.headers['content-type']);
+    res.send(response.data);
+  } catch (error) {
+    console.error('Proxy Image Error:', error.message);
+    res.status(500).send('Failed to fetch image');
+  }
+});
 // database connection
 mongoose
   .connect(process.env.MONGO)

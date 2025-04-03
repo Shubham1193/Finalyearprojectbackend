@@ -28,7 +28,7 @@ export const singleProblem = async(req, res, next) => {
 export const friends = async (req, res, next) => {
     try {
         const { name } = req.params;
-        
+        console.log(name)
         // First, find the user to get their ID
         const user = await User.findOne({ username: name });
         if (!user) {
@@ -58,8 +58,8 @@ export const searchUsers = async (req, res) => {
     const { query } = req.params;
     try {
         const users = await User.find({ username: { $regex: query, $options: 'i' } })
-            .select('username')
-            .limit(10);
+            .select(['username', 'profilePicture'] )
+            .limit(10)
         res.status(200).json(users);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
@@ -68,46 +68,63 @@ export const searchUsers = async (req, res) => {
 
 // Send a friend request
 export const sendFriendRequest = async (req, res) => {
-    const { sender, receiver } = req.body;
-    try {
-        // Get both users
-        const senderUser = await User.findOne({ username: sender });
-        const receiverUser = await User.findOne({ username: receiver });
+  const { sender, receiver } = req.body;
+  try {
+    // Get both users
+    const senderUser = await User.findOne({ username: sender });
+    const receiverUser = await User.findOne({ username: receiver });
 
-        if (!senderUser || !receiverUser) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        // Get friends data for both users
-        const senderFriends = await Friends.findOne({ userId: senderUser._id });
-        const receiverFriends = await Friends.findOne({ userId: receiverUser._id });
-
-        if (!senderFriends || !receiverFriends) {
-            return res.status(404).json({ message: 'Friends data not found' });
-        }
-
-        // Check if already friends
-        if (senderFriends.friends.includes(receiverUser._id)) {
-            return res.status(400).json({ message: 'Already friends' });
-        }
-
-        // Check if request already sent
-        if (senderFriends.friendRequestsSent.includes(receiverUser._id)) {
-            return res.status(400).json({ message: 'Request already sent' });
-        }
-
-        // Add to appropriate arrays
-        senderFriends.friendRequestsSent.push(receiverUser._id);
-        receiverFriends.friendRequestsReceived.push(senderUser._id);
-        
-        await senderFriends.save();
-        await receiverFriends.save();
-
-        res.status(200).json({ message: 'Friend request sent' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+    if (!senderUser || !receiverUser) {
+      return res.status(404).json({ message: 'User not found' });
     }
+
+    // Get or create friends data for both users
+    let senderFriends = await Friends.findOne({ userId: senderUser._id });
+    let receiverFriends = await Friends.findOne({ userId: receiverUser._id });
+
+    // Create friends document if it doesn't exist for sender
+    if (!senderFriends) {
+      senderFriends = new Friends({
+        userId: senderUser._id,
+        friends: [],
+        friendRequestsSent: [],
+        friendRequestsReceived: []
+      });
+    }
+
+    // Create friends document if it doesn't exist for receiver
+    if (!receiverFriends) {
+      receiverFriends = new Friends({
+        userId: receiverUser._id,
+        friends: [],
+        friendRequestsSent: [],
+        friendRequestsReceived: []
+      });
+    }
+
+    // Check if already friends
+    if (senderFriends.friends.some(id => id.toString() === receiverUser._id.toString())) {
+      return res.status(400).json({ message: 'Already friends' });
+    }
+
+    // Check if request already sent
+    if (senderFriends.friendRequestsSent.some(id => id.toString() === receiverUser._id.toString())) {
+      return res.status(400).json({ message: 'Request already sent' });
+    }
+
+    // Add to appropriate arrays
+    senderFriends.friendRequestsSent.push(receiverUser._id);
+    receiverFriends.friendRequestsReceived.push(senderUser._id);
+    
+    await senderFriends.save();
+    await receiverFriends.save();
+    console.log("friend request sent");
+
+    res.status(200).json({ message: 'Friend request sent' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
 
 // Get pending friend requests (sent and received)
