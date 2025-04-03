@@ -109,9 +109,13 @@ socket.on("sendMessage", ({ sender, receiver, message }) => {
     socket.emit("other user", otheruser);
   });
 
-  // code sync logic
-  socket.on("update-code", ({ id, code }) => {
-    socket.broadcast.to(id).emit("updated-code", code);
+  // code sync logic  // made this effiicinet with the below logic
+  // socket.on("update-code", ({ id, code }) => {
+  //   socket.broadcast.to(id).emit("updated-code", code);
+  // });
+  socket.on("update-code-delta", (data) => {
+    const { position, char, id } = data;
+    socket.to(id).emit("updated-code-delta", { position, char });
   });
 
   // question sync logic
