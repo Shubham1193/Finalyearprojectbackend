@@ -113,6 +113,27 @@ socket.on("sendMessage", ({ sender, receiver, message }) => {
   socket.on("update-code", ({ id, code }) => {
     socket.broadcast.to(id).emit("updated-code", code);
   });
+
+  socket.on('code-changes', (data) => {
+    // Broadcast changes to all other users in the room
+    socket.to(data.id).emit('code-changes', {
+      changes: data.changes,
+    });
+  });
+  
+  // Handle full code sync requests (for users joining late)
+  socket.on('request-full-code', (data) => {
+    // Ask other room members for the current code
+    socket.to(data.id).emit('request-full-code');
+  });
+  
+  // Handle the full code response
+  socket.on('full-code-sync', (data) => {
+    // Send the full code to everyone in the room
+    socket.to(data.id).emit('full-code-sync', {
+      code: data.code
+    });
+  });
   // socket.on("update-code-delta", (data) => {
   //   const { position, char, id } = data;
   //   socket.to(id).emit("updated-code-delta", { position, char });
