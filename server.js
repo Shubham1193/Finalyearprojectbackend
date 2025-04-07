@@ -183,7 +183,13 @@ socket.on("sendMessage", ({ sender, receiver, message }) => {
 
     socket.broadcast.to(room).emit("userdisconnect", peerId);
   });
+  socket.on('languageChange', ({ id: roomId, language, code }) => {
+    // Update room sta
 
+    // Broadcast language change to all clients in the room (except sender)
+    socket.to(roomId).emit('languageChange', { language, code });
+    console.log(`Language changed in room ${roomId} to ${language}`);
+  });
 
 
   socket.on("disconnect", () => {
