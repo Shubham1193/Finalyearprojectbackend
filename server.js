@@ -45,8 +45,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRouter);
 
 //redis connection
-const client = createClient({url : 'rediss://red-cqailkuehbks73b22gvg:vTPutJypQOL8gt1libOtd1Xy84riwmrJ@oregon-redis.render.com:6379'});
-const client2 = createClient({url : 'rediss://red-cqailkuehbks73b22gvg:vTPutJypQOL8gt1libOtd1Xy84riwmrJ@oregon-redis.render.com:6379'});
+const client = createClient({ url: 'rediss://red-cqailkuehbks73b22gvg:vTPutJypQOL8gt1libOtd1Xy84riwmrJ@oregon-redis.render.com:6379' });
+const client2 = createClient({ url: 'rediss://red-cqailkuehbks73b22gvg:vTPutJypQOL8gt1libOtd1Xy84riwmrJ@oregon-redis.render.com:6379' });
 
 client.on("error", (err) => console.log("Redis Client Error", err));
 client2.on("error", (err) => console.log("Redis Client Error", err));
@@ -68,21 +68,21 @@ io.on("connection", (socket) => {
 
   socket.on("online", (data) => {
     try {
-        const username = data.username; 
-        socketToUsername[socket.id] = username;
-        onlineUsers.add(username);
-        console.log(onlineUsers);
-        // console.log(socketToUsername)
-        io.emit("onlineUsers", Array.from(onlineUsers));
+      const username = data.username;
+      socketToUsername[socket.id] = username;
+      onlineUsers.add(username);
+      console.log(onlineUsers);
+      // console.log(socketToUsername)
+      io.emit("onlineUsers", Array.from(onlineUsers));
     } catch (error) {
-        console.error("JWT verification failed:", error.message);
+      console.error("JWT verification failed:", error.message);
     }
-});
+  });
 
-socket.on("sendMessage", ({ sender, receiver, message }) => {
-  io.emit("receiveMessage", { sender, message }); // Broadcast to receiver
-});
- 
+  socket.on("sendMessage", ({ sender, receiver, message }) => {
+    io.emit("receiveMessage", { sender, message }); // Broadcast to receiver
+  });
+
   socket.on("join room", (data) => {
     const username = jwt.verify(data.username, process.env.JWT_SECRET);
     if (roomtoPeerid[data.id]) {
@@ -110,8 +110,12 @@ socket.on("sendMessage", ({ sender, receiver, message }) => {
   });
 
   // code sync logic  // made this effiicinet with the below logic
-  socket.on("update-code", ({ id, code }) => {
-    socket.broadcast.to(id).emit("updated-code", code);
+  // socket.on("update-code", ({ id, code }) => {
+  //   socket.broadcast.to(id).emit("updated-code", code);
+  // });
+  socket.on("update-code", ({ delta, id }) => {
+    console.log(delta)
+    socket.to(id).emit("updated-code", { delta });
   });
 
   socket.on('code-changes', (data) => {
@@ -120,13 +124,13 @@ socket.on("sendMessage", ({ sender, receiver, message }) => {
       changes: data.changes,
     });
   });
-  
+
   // Handle full code sync requests (for users joining late)
   socket.on('request-full-code', (data) => {
     // Ask other room members for the current code
     socket.to(data.id).emit('request-full-code');
   });
-  
+
   // Handle the full code response
   socket.on('full-code-sync', (data) => {
     // Send the full code to everyone in the room
@@ -147,12 +151,25 @@ socket.on("sendMessage", ({ sender, receiver, message }) => {
   // clear result on resubmit
   socket.on('clear-res', ({ id }) => {
     // console.log(id + "res clear")
-    io.to(id).emit("clear-res" , "clear");
+    io.to(id).emit("clear-res", "clear");
   })
+
+  socket.on('languageChange', ({ id, language }) => {
+    // Update room sta
+    console.log(id)
+    // Broadcast language change to all clients in the room (except sender)
+    socket.to(id).emit('languageChangeSync', { language });
+    console.log(`Language changed in room ${id} to ${language}`);
+  });
+
+  socket.on("cursor-update", ({ id, position, selection }) => {
+    console.log(position)
+    socket.to(id).emit("cursor-update", { position, selection });
+  });
 
   // user disconnect logic using button
   socket.on("disco", ({ peerId, token }) => {
-    
+
     const username = jwt.verify(token, process.env.JWT_SECRET);
     const usernameid = username.id;
     const room = socketoroomid[socket.id];
@@ -183,13 +200,7 @@ socket.on("sendMessage", ({ sender, receiver, message }) => {
 
     socket.broadcast.to(room).emit("userdisconnect", peerId);
   });
-  socket.on('languageChange', ({ id: roomId, language, code }) => {
-    // Update room sta
-
-    // Broadcast language change to all clients in the room (except sender)
-    socket.to(roomId).emit('languageChange', { language, code });
-    console.log(`Language changed in room ${roomId} to ${language}`);
-  });
+  
 
 
   socket.on("disconnect", () => {
@@ -197,13 +208,13 @@ socket.on("sendMessage", ({ sender, receiver, message }) => {
     const peerId = sockettopeerid[socket.id];
     const room = socketoroomid[socket.id];
     const usernamee = socketToUsername[socket.id];
-        if (usernamee) {
-            delete socketToUsername[socket.id];
-            onlineUsers.delete(usernamee);
-            console.log(onlineUsers)
-            // console.log(`${username} disconnected.`);
-            io.emit("onlineUsers", Array.from(onlineUsers));
-        }
+    if (usernamee) {
+      delete socketToUsername[socket.id];
+      onlineUsers.delete(usernamee);
+      console.log(onlineUsers)
+      // console.log(`${username} disconnected.`);
+      io.emit("onlineUsers", Array.from(onlineUsers));
+    }
 
     if (room && roomtoPeerid[room]) {
       roomtoPeerid[room] = roomtoPeerid[room].filter(
@@ -237,7 +248,7 @@ socket.on("sendMessage", ({ sender, receiver, message }) => {
 app.post("/submit", async (req, res) => {
   try {
     res.status(200).send("submitted");
-    let { fullCode , userLang, id, question } = req.body;
+    let { fullCode, userLang, id, question } = req.body;
     console.log(userLang)
     // Push submission data onto Redis list 'problems'
     await client.lPush(
@@ -252,11 +263,11 @@ app.post("/submit", async (req, res) => {
         console.log(message)
         // console.log(channel)
         io.to(id).emit("code-result", message);
-        let {testCase , status} = JSON.parse(message)
+        let { testCase, status } = JSON.parse(message)
 
         // Save to database for each user in the room
         roomtouserid[id].forEach(user => {
-          saveData(user, question._id , fullCode, userLang, testCase , status);
+          saveData(user, question._id, fullCode, userLang, testCase, status);
         });
 
         // Unsubscribe after handling the message
@@ -272,15 +283,15 @@ app.post("/submit", async (req, res) => {
 });
 
 //save data
-const saveData = async (userId, questionId, code, language, result , status) => {
-  console.log(userId , questionId , code , language , result , status)
+const saveData = async (userId, questionId, code, language, result, status) => {
+  console.log(userId, questionId, code, language, result, status)
   try {
     const sub = await Submission.findOneAndUpdate(
       { userId: userId, questionId: questionId },
-      { code: code, language: language, result: result , status : status },
+      { code: code, language: language, result: result, status: status },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
-    console.log("data saved" , sub)
+    console.log("data saved", sub)
   } catch (error) {
     console.error("Database save error:", error);
   }
